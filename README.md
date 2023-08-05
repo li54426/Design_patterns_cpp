@@ -551,6 +551,7 @@ public:
 代码功能: 
 
 - 实现流, 文件流, 网络流, 内存流以及额外的操作, 加密, 缓存等
+- 所有的**接口**都是**一样**的, `Read, Seek, write`
 - 每个流 都有额外的操作, 
 
 ```c++
@@ -719,6 +720,7 @@ public:
 };
 
 // ---------------扩展操作---------------
+// 直接继承自基类
 DecoratorStream: public Stream{
 protected:
     // 一个 抽象类
@@ -774,6 +776,8 @@ void Process(){
 }
 ```
 
+
+
 #### 5.2 Bridge 桥模式
 
 > 由于某些类型的固有的实现逻辑，使得它们具有两个变化的维度，乃至**多个纬度**的变化。
@@ -822,6 +826,7 @@ public:
     virtual void Connect(){...}
 };
 
+// 实现了四个函数
 class MobileMessagerBase : public Messager{
 public:
     // 手机平台的实现
@@ -832,7 +837,8 @@ public:
 };
 
 
-//业务抽象
+// 业务抽象
+// 实现了剩下的函数
 class PCMessagerLite : public PCMessagerBase {
 public:
     virtual void Login(string username, string password){
@@ -915,92 +921,6 @@ void Process(){
 
 
 
-class Messager{
-protected:
-     MessagerImp* messagerImp;//...
-public:
-    virtual void Login(string username, string password)=0;
-    virtual void SendMessage(string message)=0;
-    virtual void SendPicture(Image image)=0;
-    
-    virtual ~Messager(){}
-};
-
-class MessagerImp{
-public:
-    virtual void PlaySound()=0;
-    virtual void DrawShape()=0;
-    virtual void WriteText()=0;
-    virtual void Connect()=0;
-    
-    virtual MessagerImp(){}
-};
-
-
-//平台实现 m
-class PCMessagerImp : public MessagerImp{
-public:
-    // PC 平台的实现
-    virtual void PlaySound(){...}
-    virtual void DrawShape(){...}
-    virtual void WriteText(){...}
-    virtual void Connect(){...}
-};
-
-class MobileMessagerImp : public MessagerImp{
-public:
-    // Mobile 平台的实现
-    virtual void PlaySound(){...}
-    virtual void DrawShape(){...}
-    virtual void WriteText(){...}
-    virtual void Connect(){...}
-};
-
-//业务抽象 n
-//类的数目：1+n+m
-class MessagerLite :public Messager {
-public:
-    virtual void Login(string username, string password){
-        messagerImp->Connect();
-        //........
-    }
-    virtual void SendMessage(string message){
-        messagerImp->WriteText();
-        //........
-    }
-    virtual void SendPicture(Image image){
-        messagerImp->DrawShape();
-        //........
-    }
-};
-
-class MessagerPerfect  :public Messager {
-public:
-    virtual void Login(string username, string password){
-        messagerImp->PlaySound();
-        messagerImp->Connect();
-        ...
-    }
-    virtual void SendMessage(string message){
-        messagerImp->PlaySound();
-        ...
-        messagerImp->WriteText();
-
-    }
-    virtual void SendPicture(Image image){
-        messagerImp->PlaySound();
-        ...
-        messagerImp->DrawShape();
-
-    }
-};
-
-
-void Process(){
-    //运行时装配
-    MessagerImp* mImp=new PCMessagerImp();
-    Messager *m =new Messager(mImp);
-}
 
 //------------------------------[Version2.c]-----------------------------------
 //-----------------------------------------------------------------------------
@@ -1046,8 +966,8 @@ public:
     virtual void Connect(){...}
 };
 
-//业务抽象 n
-//类的数目：1+n+m
+// 业务抽象 n
+// 类的数目：1+n+m
 class MessagerLite :public Messager {
 public:
     virtual void Login(string username, string password){
@@ -1093,6 +1013,19 @@ void Process(){
 }
 
 ```
+
+
+
+#### 桥模式和 unique_ptr<>
+
+使用 `unique_ptr<>`注意：
+
+- 使用不完整类型进行实例化时包含其的构造函数和析构函数（移动构造、移动赋值）必须见到**完整类型**
+- 自动让类获得无法拷贝和移动的语义
+
+
+
+
 
 
 
@@ -1179,6 +1112,10 @@ public:
 };
 ```
 
+
+
+
+
 #### 6.2 abstract factory 抽象(家族)工厂---一系列相互依赖的对象的创建
 
 > **定义**
@@ -1193,7 +1130,7 @@ public:
 
 ![image-20221129114725456](assets/image-20221129114725456.png)
 
-代码功能: 数据库模块，有连接, 发送命令, 读取结果, 这三个操作, 也拥有跨**平台性**, 但是, 每个平台的三个操作是有**相关性**的
+代码功能: 实现数据库模块，有连接, 发送命令, 读取结果, 这三个操作, 也拥有跨**平台性**, 但是, 每个平台的三个操作是有**相关性**的
 
 ```c++
 //--------------------------------[Version2.cpp]--------------------------------------
@@ -1388,6 +1325,14 @@ public:
     一表示被构造的复杂对象.ConcreteBuildert创建该产品的内部表示并定义它的装配过程.
     一包含定义组成部件的类,包括将这些部件装配成最终产品的接口.
 - **代码功能**: 建造房子，使用的材料不同，比如木房子, 石头房子, 但构建的流程不变, 都要构建门, 窗户等等。
+- 问题在于: 构造函数中调用的其他函数没有办法体现出**多态**性, 会先调用父类的实现
+
+
+
+构造函数调用虚函数的问题
+
+- 一般情况下,不允许在构造函数或者析构函数中调用虚函数.其实语法上都没有问题,只是会失去多态性.
+- 如果在构造函数中调用虚函数,会**先调用父类中的实现**,也就失去了多态的性质.
 
 ```c++
 //--------------------------------[Version1.cpp]--------------------------------------
@@ -1405,8 +1350,13 @@ public:
             this->BuildPart4();
         }
         this->BuildPart5();
-        return this->BuilderPart5();
+        //return this->BuilderPart5();
     }
+    
+    virtual void BuildPart1() = 0;
+    virtual void BuildPart2() = 0;
+    virtual void BuildPart3() = 0;
+    virtual void BuildPart4() = 0;
 };
 
 
